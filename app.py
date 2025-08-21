@@ -5,12 +5,8 @@ import re
 
 import pdfplumber
 import docx
-import gradio as gr
-
 from fastapi import FastAPI
 from pydantic import BaseModel
-import threading
-
 
 from langchain.docstore.document import Document
 from langchain_community.vectorstores import FAISS
@@ -20,12 +16,13 @@ from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 
-
+# -----------------------------
+# API Keys
+# -----------------------------
 OPENROUTER_API_KEY = os.getenv("GIKI_OPENROUTER_API_KEY")
 os.environ["OPENAI_API_KEY"] = OPENROUTER_API_KEY
 os.environ["OPENAI_API_BASE"] = "https://openrouter.ai/api/v1"
 os.environ["OPENAI_API_HEADERS"] = '{"HTTP-Referer":"https://huggingface.co","X-Title":"GIKI-RAG-bot"}'
-
 
 # -----------------------------
 # Document Processor
@@ -50,7 +47,7 @@ class GIKIDocumentProcessor:
                         page_text = re.sub(r'\s+', ' ', page_text)
                         text += f"\n[Page {page_num + 1}]\n{page_text}\n"
         except Exception as e:
-            print(f"Error extracting from PDF {file_path}: {e}")
+            print(f"Error extracting PDF {file_path}: {e}")
         return text
 
     def extract_text_from_docx(self, file_path: str) -> str:
@@ -61,7 +58,7 @@ class GIKIDocumentProcessor:
                 if paragraph.text.strip():
                     text += paragraph.text + "\n"
         except Exception as e:
-            print(f"Error extracting from DOCX {file_path}: {e}")
+            print(f"Error extracting DOCX {file_path}: {e}")
         return text
 
     def extract_text_from_txt(self, file_path: str) -> str:
@@ -69,7 +66,7 @@ class GIKIDocumentProcessor:
             with open(file_path, 'r', encoding='utf-8') as file:
                 return file.read()
         except Exception as e:
-            print(f"Error extracting from TXT {file_path}: {e}")
+            print(f"Error extracting TXT {file_path}: {e}")
             return ""
 
     def load_documents(self) -> List[Document]:
@@ -109,7 +106,6 @@ class GIKIDocumentProcessor:
         print(f"✅ Loaded {len(documents)} document chunks")
         return documents
 
-
 # -----------------------------
 # Chatbot
 # -----------------------------
@@ -123,8 +119,14 @@ class GIKIbot:
             model_kwargs={'device': 'cpu'},
             encode_kwargs={'normalize_embeddings': True}
         )
-        self.prompt_template = """You are a helpful assistant for GIKI.
-Answer questions based on official documents.
+        self.prompt_template = """You are a helpful assistant for GIKI (Ghulam Ishaq Khan Institute of Engineering Sciences and Technology).
+Answer questions based on official GIKI documents: prospectus, fee structure, academic rules, and handbook.
+
+Instructions:
+- Answer based only on context
+- If answer not found, say "I don't have that information in the provided documents"
+- Be specific and cite document source when possible
+- Maintain professional, student-friendly tone
 
 Context:
 {context}
@@ -180,46 +182,29 @@ Answer:"""
         except Exception as e:
             return f"❌ Error: {str(e)}"
 
-
 # -----------------------------
-# Gradio Interface
+# Initialize Bot
 # -----------------------------
 bot = GIKIbot()
-init_message = bot.initialize_system()
+init_msg = bot.initialize_system()
+print(init_msg)
 
-def chat_fn(user_input):
-    return bot.ask_question(user_input)
-
-with gr.Blocks() as demo:
-    gr.Markdown("# GIKI-RAG Chatbot")
-    gr.Markdown(init_message)
-
-    chatbot = gr.Chatbot()
-    msg = gr.Textbox(placeholder="Ask a question...")
-    clear = gr.Button("Clear Chat")
-    state = gr.State([])
-
-    def respond(user_message, history):
-        bot_reply = chat_fn(user_message)
-        history = history + [(user_message, bot_reply)]
-        return history, history
-
-    msg.submit(respond, [msg, state], [chatbot, state])
-    clear.click(lambda: [], None, [chatbot, state])
-
-# --- FastAPI part ---
-api = FastAPI()
+# -----------------------------
+# FastAPI App
+# -----------------------------
+app = FastAPI(title="GIKI-RAG Chatbot API")
 
 class Question(BaseModel):
     question: str
 
-@api.post("/chat")
-def chat_endpoint(q: Question):
+@app.get("/")
+def root():
+    return {"message": "GIKI-RAG Chatbot API is running!"}
+
+@app.post("/chat")
+def chat(q: Question):
     return {"answer": bot.ask_question(q.question)}
 
-if __name__ == "__main__":
-    # Start Gradio in a separate thread (optional)
-    threading.Thread(target=lambda: demo.launch(server_name="0.0.0.0", server_port=8081)).start()
-    # FastAPI runs on port 8080 (or $PORT for Railway)
-    import uvicorn
-    uvicorn.run(api, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+# -----------------------------
+# Run with: uvicorn app:app --host 0.0.0.0 --port 8080
+# -----------------------------
