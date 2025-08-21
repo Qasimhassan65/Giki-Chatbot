@@ -7,6 +7,11 @@ import pdfplumber
 import docx
 import gradio as gr
 
+from fastapi import FastAPI
+from pydantic import BaseModel
+import threading
+
+
 from langchain.docstore.document import Document
 from langchain.vectorstores import FAISS
 from langchain.embeddings import HuggingFaceEmbeddings
@@ -192,8 +197,7 @@ with gr.Blocks() as demo:
     chatbot = gr.Chatbot()
     msg = gr.Textbox(placeholder="Ask a question...")
     clear = gr.Button("Clear Chat")
-
-    state = gr.State([])  # keeps chat history
+    state = gr.State([])
 
     def respond(user_message, history):
         bot_reply = chat_fn(user_message)
@@ -203,5 +207,19 @@ with gr.Blocks() as demo:
     msg.submit(respond, [msg, state], [chatbot, state])
     clear.click(lambda: [], None, [chatbot, state])
 
+# --- FastAPI part ---
+api = FastAPI()
+
+class Question(BaseModel):
+    question: str
+
+@api.post("/chat")
+def chat_endpoint(q: Question):
+    return {"answer": bot.ask_question(q.question)}
+
 if __name__ == "__main__":
-    demo.launch()
+    # Start Gradio in a separate thread (optional)
+    threading.Thread(target=lambda: demo.launch(server_name="0.0.0.0", server_port=8081)).start()
+    # FastAPI runs on port 8080 (or $PORT for Railway)
+    import uvicorn
+    uvicorn.run(api, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
