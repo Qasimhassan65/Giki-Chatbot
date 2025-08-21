@@ -1,1 +1,34 @@
-GIKI_OPENROUTER_API_KEY = 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
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.env/
+venv/
+ENV/
+env/
+.venv/
+
+# Environment variables
+*.env
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# VS Code settings
+.vscode/
+
+# Logs and databases
+*.log
+*.sqlite3
+*.db
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Build / distribution
+build/
+dist/
+*.egg-info/
