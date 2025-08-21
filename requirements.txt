@@ -1,8 +1,5 @@
 fastapi
-uvicorn
-langchain
+uvicorn[standard]
 langchain-community
 langchain-openai
-sentence-transformers
-pdfplumber
-python-docx
+faiss-cpu
