@@ -1,7 +1,7 @@
 fastapi
 uvicorn
 langchain
-langchain- community
+langchain-community
 langchain-openai
 sentence-transformers
 pdfplumber
