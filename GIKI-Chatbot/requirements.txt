@@ -1,0 +1,8 @@
+langchain
+faiss-cpu
+huggingface_hub
+gradio
+pdfplumber
+python-docx
+python-dotenv
+langchain-openai
