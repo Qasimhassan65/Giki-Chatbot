@@ -1,10 +1,11 @@
 langchain
+langchain-openai
+langchain-community
 faiss-cpu
 huggingface_hub
 gradio
 pdfplumber
 python-docx
 python-dotenv
-langchain-openai
 fastapi
 uvicorn
